@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "ShotWise AI Director"
+description = "A conversational AI directing companion that turns scenes into thoughtful, resource-aware shot lists for directors, DPs, and crews."
+version = "1.0.0"
+id = "artifacts/shotwise"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18748
+
+[services.development]
+run = "pnpm --filter @workspace/shotwise run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/shotwise", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/shotwise/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18748"
+BASE_PATH = "/"

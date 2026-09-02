@@ -1,0 +1,717 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: gemini
+    description: Gemini-powered directing companion operations
+  - name: projects
+    description: Persistent director projects
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /gemini/analyze:
+    post:
+      operationId: analyzeScene
+      tags: [gemini]
+      summary: Analyze an existing project scene and propose a shot list
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SceneAnalysisInput"
+      responses:
+        "200":
+          description: Scene analysis and proposed shot list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShotListResponse"
+        "400":
+          description: Invalid scene input
+        "401":
+          description: Authentication required
+        "404":
+          description: Project scene not found
+        "500":
+          description: Gemini request failed
+  /gemini/respond/stream:
+    post:
+      operationId: streamDirectorResponse
+      tags: [gemini]
+      summary: Stream a director response and persist the revised shot list
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DirectorMessageInput"
+      responses:
+        "200":
+          description: Server-sent events containing message deltas and the final saved project
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        "400":
+          description: Invalid conversation input
+        "401":
+          description: Authentication required
+        "404":
+          description: Project not found
+        "500":
+          description: Gemini request failed
+  /projects:
+    get:
+      operationId: listProjects
+      tags: [projects]
+      summary: List the signed-in director's projects
+      responses:
+        "200":
+          description: Saved projects ordered by most recently updated
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Project"
+        "401":
+          description: Authentication required
+    post:
+      operationId: createProject
+      tags: [projects]
+      summary: Create a film project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectCreate"
+      responses:
+        "200":
+          description: Created project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+  /projects/{projectId}:
+    get:
+      operationId: getProject
+      tags: [projects]
+      summary: Load one saved director project
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Saved project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "401":
+          description: Authentication required
+        "404":
+          description: Project not found
+    patch:
+      operationId: updateProject
+      tags: [projects]
+      summary: Update project details, production notes, or lock state
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectUpdate"
+      responses:
+        "200":
+          description: Updated project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "400":
+          description: Invalid update
+        "401":
+          description: Authentication required
+        "404":
+          description: Project not found
+  /projects/{projectId}/scenes:
+    get:
+      operationId: listScenes
+      tags: [projects]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Project scenes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SceneProject"
+    post:
+      operationId: createScene
+      tags: [projects]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SceneCreate"
+      responses:
+        "200":
+          description: Created scene
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SceneProject"
+  /projects/{projectId}/scenes/{sceneId}:
+    get:
+      operationId: getScene
+      tags: [projects]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - $ref: "#/components/parameters/SceneId"
+      responses:
+        "200":
+          description: Scene
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SceneProject"
+    patch:
+      operationId: updateScene
+      tags: [projects]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - $ref: "#/components/parameters/SceneId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SceneUpdate"
+      responses:
+        "200":
+          description: Updated scene
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SceneProject"
+  /shoot-days:
+    get:
+      operationId: listShootDays
+      tags: [projects]
+      responses:
+        "200":
+          description: Shoot days
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ShootDay"
+    post:
+      operationId: createShootDay
+      tags: [projects]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShootDayCreate"
+      responses:
+        "200":
+          description: Created shoot day
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShootDay"
+  /shoot-days/{shootDayId}:
+    patch:
+      operationId: updateShootDay
+      tags: [projects]
+      parameters:
+        - $ref: "#/components/parameters/ShootDayId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShootDayUpdate"
+      responses:
+        "200":
+          description: Updated shoot day
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShootDay"
+components:
+  parameters:
+    ProjectId:
+      name: projectId
+      in: path
+      required: true
+      schema:
+        type: string
+    SceneId:
+      name: sceneId
+      in: path
+      required: true
+      schema:
+        type: string
+    ShootDayId:
+      name: shootDayId
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    ChatMessage:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [director, assistant]
+        content:
+          type: string
+      required: [role, content]
+    Shot:
+      type: object
+      properties:
+        id:
+          type: string
+        shotNumber:
+          type: number
+        shotType:
+          type: string
+        framing:
+          type: string
+        angle:
+          type: string
+        lens:
+          type: string
+        movement:
+          type: string
+        lighting:
+          type: string
+        composition:
+          type: string
+        rationale:
+          type: string
+        equipment:
+          type: array
+          items:
+            type: string
+        crew:
+          type: array
+          items:
+            type: string
+        setupTime:
+          type: string
+          description: Honest setup-time range, such as "10–25 min depending on crew familiarity and location access".
+        setupTimeOverride:
+          type: ["string", "null"]
+          description: Director-entered planning time that overrides the estimate downstream.
+        locationRequirements:
+          type: string
+        vfxRequirements:
+          type: string
+        budgetImpact:
+          type: string
+        feasibility:
+          type: string
+          enum: [easy, needs-time-or-gear, complex]
+        alternative:
+          type: ["string", "null"]
+        sourceType:
+          type: string
+          enum: [practical, ai-generated]
+        computeGenerationCost:
+          type: ["string", "null"]
+        modelTool:
+          type: ["string", "null"]
+        promptIterationTime:
+          type: ["string", "null"]
+        consistencyAcrossShots:
+          type: ["string", "null"]
+        upscalingPostNeeds:
+          type: ["string", "null"]
+        referenceExamples:
+          type: array
+          items:
+            type: object
+            properties:
+              title: { type: string }
+              work: { type: string }
+              medium: { type: string }
+              technique: { type: string }
+              url: { type: ["string", "null"] }
+            required: [title, work, medium, technique, url]
+        learningResources:
+          type: array
+          items:
+            type: object
+            properties:
+              title: { type: string }
+              kind: { type: string }
+              url: { type: string }
+            required: [title, kind, url]
+      required:
+        - id
+        - shotNumber
+        - shotType
+        - framing
+        - angle
+        - lens
+        - movement
+        - lighting
+        - composition
+        - rationale
+        - equipment
+        - crew
+        - setupTime
+        - setupTimeOverride
+        - locationRequirements
+        - vfxRequirements
+        - budgetImpact
+        - feasibility
+        - alternative
+        - sourceType
+        - computeGenerationCost
+        - modelTool
+        - promptIterationTime
+        - consistencyAcrossShots
+        - upscalingPostNeeds
+        - referenceExamples
+        - learningResources
+    SceneAnalysisInput:
+      type: object
+      properties:
+        sceneText:
+          type: string
+          minLength: 20
+        resources:
+          type: string
+        budget:
+          type: string
+        equipment:
+          type: string
+        crewExperience:
+          type: string
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatMessage"
+        challengeMode:
+          type: boolean
+          default: false
+        projectId:
+          type: string
+        sceneId:
+          type: string
+        projectType:
+          type: string
+      required: [sceneText, resources, budget, equipment, crewExperience, history, projectId, sceneId]
+    DirectorMessageInput:
+      type: object
+      properties:
+        projectId:
+          type: string
+        sceneId:
+          type: string
+        message:
+          type: string
+          minLength: 1
+        challengeMode:
+          type: boolean
+          default: false
+        resources:
+          type: string
+        budget:
+          type: string
+        equipment:
+          type: string
+        crewExperience:
+          type: string
+      required: [projectId, sceneId, message]
+    ShotListResponse:
+      type: object
+      properties:
+        projectId:
+          type: string
+        sceneId:
+          type: string
+        message:
+          type: string
+        shots:
+          type: array
+          items:
+            $ref: "#/components/schemas/Shot"
+        readyToLock:
+          type: boolean
+      required: [projectId, sceneId, message, shots, readyToLock]
+    SceneProject:
+      type: object
+      properties:
+        id:
+          type: string
+        projectId:
+          type: string
+        sceneNumber:
+          type: number
+        title:
+          type: string
+        sceneText:
+          type: string
+        resources:
+          type: string
+        budget:
+          type: string
+        equipment:
+          type: string
+        crewExperience:
+          type: string
+        challengeMode:
+          type: boolean
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatMessage"
+        shots:
+          type: array
+          items:
+            $ref: "#/components/schemas/Shot"
+        productionNotes:
+          type: string
+        readyToLock:
+          type: boolean
+        locked:
+          type: boolean
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - projectId
+        - sceneNumber
+        - title
+        - sceneText
+        - resources
+        - budget
+        - equipment
+        - crewExperience
+        - challengeMode
+        - messages
+        - shots
+        - productionNotes
+        - readyToLock
+        - locked
+        - createdAt
+        - updatedAt
+    ProjectUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+        sceneText:
+          type: string
+          minLength: 20
+        resources:
+          type: string
+        budget:
+          type: string
+        equipment:
+          type: string
+        crewExperience:
+          type: string
+        challengeMode:
+          type: boolean
+        shots:
+          type: array
+          items:
+            $ref: "#/components/schemas/Shot"
+        productionNotes:
+          type: string
+        locked:
+          type: boolean
+        projectType:
+          type: string
+        overallNotes:
+          type: string
+    ProjectCreate:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+        projectType:
+          type: string
+          enum: [live-action, ai-generated, music-video, documentary, hybrid]
+      required: [title, projectType]
+    SceneCreate:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+        sceneNumber:
+          type: number
+        sceneText:
+          type: string
+      required: [title, sceneNumber, sceneText]
+    SceneUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        sceneNumber:
+          type: number
+        sceneText:
+          type: string
+        resources:
+          type: string
+        budget:
+          type: string
+        equipment:
+          type: string
+        crewExperience:
+          type: string
+        challengeMode:
+          type: boolean
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatMessage"
+        shots:
+          type: array
+          items:
+            $ref: "#/components/schemas/Shot"
+        productionNotes:
+          type: string
+        readyToLock:
+          type: boolean
+        locked:
+          type: boolean
+    Project:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        projectType:
+          type: string
+          enum: [live-action, ai-generated, music-video, documentary, hybrid]
+        overallNotes:
+          type: string
+        scenes:
+          type: array
+          items:
+            $ref: "#/components/schemas/SceneProject"
+        totalSceneCount:
+          type: number
+        completedSceneCount:
+          type: number
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required: [id, title, projectType, overallNotes, scenes, totalSceneCount, completedSceneCount, createdAt, updatedAt]
+    ShootDayShot:
+      type: object
+      properties:
+        id:
+          type: string
+        projectId:
+          type: string
+        sceneId:
+          type: string
+        shotId:
+          type: string
+        position:
+          type: number
+        status:
+          type: string
+        plannedSetupTime:
+          type: ["string", "null"]
+      required: [id, projectId, sceneId, shotId, position, status, plannedSetupTime]
+    ShootDay:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        shootDate:
+          type: ["string", "null"]
+        notes:
+          type: string
+        status:
+          type: string
+        shots:
+          type: array
+          items:
+            $ref: "#/components/schemas/ShootDayShot"
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required: [id, title, shootDate, notes, status, shots, createdAt, updatedAt]
+    ShootDayCreate:
+      type: object
+      properties:
+        title:
+          type: string
+        shootDate:
+          type: ["string", "null"]
+      required: [title, shootDate]
+    ShootDayUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        shootDate:
+          type: ["string", "null"]
+        notes:
+          type: string
+        status:
+          type: string
+        shots:
+          type: array
+          items:
+            $ref: "#/components/schemas/ShootDayShot"
+

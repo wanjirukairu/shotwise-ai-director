@@ -1,0 +1,3 @@
+- [Gemini model availability](gemini-model-availability.md) — new Google API keys may reject older model IDs; use the current model named by the API response.
+- [Orval integer schemas](orval-integer-schemas.md) — this workspace’s Zod generator can emit zod.int(), which is incompatible with its installed Zod version.
+- [Post-merge route reconciliation](post-merge-route-reconciliation.md) — overlapping task merges can produce valid-looking duplicate handlers; always build after setup succeeds.
